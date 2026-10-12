@@ -1,0 +1,61 @@
+# ---- SECRETS: never commit ----
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+client_secret*.json
+*-sa.json
+*service-account*.json
+*serviceaccount*.json
+gcp-key*.json
+ap2/keys/
+**/keys/
+.certs/
+*.token
+.netrc
+
+# ---- Python ----
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# ---- Node / React ----
+node_modules/
+web/dist/
+web/.vite/
+.npm/
+*.tsbuildinfo
+
+# ---- Data / generated ----
+*.db
+*.sqlite3
+data/generated/
+seed_output/
+*.ndjson
+*.parquet
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Claude Code ----
+.claude/settings.local.json
+
+# ---- Logs ----
+*.log
+logs/
