@@ -160,3 +160,79 @@ Two details worth knowing:
 | ☐ | **G0.3** | Pin deps on Python 3.12 | `==` everywhere |
 | ☐ | **G0.4** | Hello-world to Cloud Run + **test public access** | Proves pipeline + org policy |
 | ☐ | **G0.5** | Check Vertex AI quota | — |
+
+---
+
+## 9. Day 0 results — what was actually tested (2026-10-12)
+
+### ✅ Provisioned
+
+| Resource | Value | Note |
+|---|---|---|
+| BigQuery dataset | `ctoteam.retailpulse` | **`us-central1`** — not `US` |
+| Firestore Native DB | `retailpulse-db` | `us-central1`. Pass `database="retailpulse-db"` in **every** client call. |
+| BQ connection | `ctoteam.us-central1.retailpulse-conn` | Created, but **unusable** — see below |
+
+### 🔴 Confirmed blocker: `ML.GENERATE_EMBEDDING` is dead
+
+The connection SA `bqcx-1035117862188-jlow@gcp-sa-bigquery-condel` needs `roles/aiplatform.user`
+and we cannot grant it. Verified error:
+
+> `does not have the permission to access or use the endpoint. Please grant the 'Agent Platform User' role`
+
+### ✅ Workaround proven end to end — G1.3 is NOT blocked
+
+`VECTOR_SEARCH` only needs embeddings **stored in a column**. Only *generating* them needs the
+remote model. We have `aiplatform.endpoints.predict`, so Python generates them directly.
+
+**Verified pipeline:** Vertex `text-embedding-005` REST (768-dim) → NDJSON → `bq load`
+(`FLOAT64 REPEATED`) → `VECTOR_SEARCH(... distance_type => 'COSINE')`
+
+Live result for query *"shoes for running a marathon"*:
+
+| Rank | Product | Cosine distance |
+|---|---|---|
+| 1 | Max cushioned **road** shoe, marathon training | **0.2300** |
+| 2 | Trail shoe, aggressive lugs | 0.3330 |
+| 3 | Leather dress oxford | 0.4532 |
+
+**This is the G1.3 done-test, passing.** Semantic ranking is correct — road beats trail.
+
+**Architecture change:** embed in Python at seed time and at query time; never in SQL.
+This is *better* for the demo — no dependency on a connection grant, and query-time embedding
+is a single REST call we already control.
+
+### 🟡 Still blocked
+
+| Item | Status |
+|---|---|
+| Service account creation + IAM grants (G0.2) | Pending admin — fall back to Route C |
+| Pub/Sub topics (G6.1) | Pending admin — fall back to "Simulate spike" button |
+
+### ⚠️ Org policy: `constraints/gcp.resourceLocations`
+
+`US` multi-region is **blocked** for new resources (older datasets predate the policy).
+**Everything must be `us-central1`.** Applies to BigQuery, Firestore, and Cloud Run.
+
+### 🌐 Corporate TLS interception
+
+The network re-signs TLS with a corporate root CA. Windows trusts it; bundled CA stores do not.
+Fix applied for git (full validation preserved, nothing weakened):
+
+```bash
+# 70 Windows root CAs exported to ~/.certs/ca-bundle.pem
+git config --global http.sslBackend openssl
+git config --global http.sslCAInfo "C:/Users/MadhuVamsiTuraka/.certs/ca-bundle.pem"
+```
+
+**The same wall will hit `pip`, `npm`, and `requests`.** Pre-emptive fix:
+
+```bash
+export REQUESTS_CA_BUNDLE="C:/Users/MadhuVamsiTuraka/.certs/ca-bundle.pem"
+export PIP_CERT="C:/Users/MadhuVamsiTuraka/.certs/ca-bundle.pem"
+npm config set cafile "C:/Users/MadhuVamsiTuraka/.certs/ca-bundle.pem"
+```
+
+Note: `curl` on Windows uses schannel and ignores `--cacert`; and PowerShell's
+`Invoke-RestMethod` trips Google's bot filter (HTTP 417). **Use `curl` with `-o` for Google
+APIs** — shell `>` redirects proved unreliable here.

@@ -3,6 +3,24 @@
 Main goals only. Every goal has a **binary done-test** — if you can't run the test, it isn't done.
 Full detail in [BUILD_PLAN.md](./BUILD_PLAN.md).
 
+
+## 📍 Day 0 status — 2026-10-12
+
+| Goal | Status |
+|---|---|
+| G0.1 Enable APIs | ✅ **Already enabled** — nothing to do |
+| G0.2b Firestore Native DB `retailpulse-db` | ✅ Created (`us-central1`) |
+| G0.2c `ML.GENERATE_EMBEDDING` | 🔴 Blocked — ✅ **workaround proven**, G1.3 safe |
+| BigQuery dataset `retailpulse` | ✅ Created (`us-central1`) |
+| G0.2 Service-account split | 🟡 Pending admin → Route C fallback |
+| G6.1 Pub/Sub | 🟡 Pending admin → "Simulate spike" fallback |
+| G0.0a Python 3.12 | ⬜ **You** — 3.14 installed, too new |
+| G0.0b Node 20 LTS | ⬜ **You** — not installed |
+| G0.0c Admin request | ⬜ **You** — template in PERMISSIONS.md §4 |
+
+⚠️ **All resources must be `us-central1`** — org policy blocks `US` multi-region.
+See [PERMISSIONS.md](./PERMISSIONS.md) §9 for full Day 0 results.
+
 ---
 
 ## 🔧 Day 0 — Setup (tonight, ~2h)
