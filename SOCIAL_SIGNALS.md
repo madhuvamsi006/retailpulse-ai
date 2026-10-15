@@ -12,7 +12,7 @@ what loses **$300B/yr in markdowns and stockouts**. Batch models trained on hist
 structurally blind to demand that has no history yet: a video goes viral Tuesday, the shelf is
 empty Thursday, the reorder lands three weeks later into dead demand.
 
-RetailPulse closes that gap. The claim is narrow and defensible:
+Groundswell closes that gap. The claim is narrow and defensible:
 
 > **Baseline forecasting answers "what did this SKU do?" We also answer "what is about to happen to it?"**
 
@@ -124,7 +124,7 @@ Every term is defensible in Q&A:
 
 The single highest-value screen in the build. **Split the panel.**
 
-| | Baseline (ARIMA_PLUS only) | RetailPulse (fused) |
+| | Baseline (ARIMA_PLUS only) | Groundswell (fused) |
 |---|---|---|
 | 7-day forecast | 31 units | **142 units** |
 | Reorder qty | 40 | **160** |

@@ -1,4 +1,4 @@
-# RetailPulse AI — 5-Day Solo Build Plan
+# Groundswell — 5-Day Solo Build Plan
 
 **Constraints:** solo dev · 3–5 days · full GCP project + billing · React + FastAPI frontend
 
@@ -8,7 +8,7 @@
 
 > **Agents propose. Deterministic code disposes.**
 >
-> RetailPulse runs a closed loop — understand intent → recommend only *viable* products → detect inventory risk → propose corrective action → enforce cryptographic authorization before any money or stock moves. The LLM never touches the database and never approves a payment.
+> Groundswell runs a closed loop — understand intent → recommend only *viable* products → detect inventory risk → propose corrective action → enforce cryptographic authorization before any money or stock moves. The LLM never touches the database and never approves a payment.
 
 Every build decision below is scored against whether it makes that sentence demonstrable on screen in four minutes.
 
@@ -56,7 +56,7 @@ See [SOCIAL_SIGNALS.md](./SOCIAL_SIGNALS.md) for the full design.
 
 **Then the money shot — split the panel:**
 
-| | Baseline (what every retailer runs today) | RetailPulse |
+| | Baseline (what every retailer runs today) | Groundswell |
 |---|---|---|
 | 7-day forecast | 31 units | **142 units** |
 | Reorder | 40 | **160** |
@@ -120,7 +120,7 @@ Ruthless cuts are the difference between a demo and an apology.
 ## 3. Repository layout
 
 ```
-retailpulse/
+groundswell/
 ├── infra/
 │   ├── setup.sh                 # one-shot: enable APIs, create dataset, SA, topics
 │   ├── bigquery/
@@ -175,7 +175,7 @@ retailpulse/
 
 ## 4. Data model
 
-### BigQuery — dataset `retailpulse` (analytical)
+### BigQuery — dataset `groundswell` (analytical)
 
 | Table | Key columns |
 |---|---|

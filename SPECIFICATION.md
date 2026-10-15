@@ -1,4 +1,4 @@
-# RetailPulse AI — Technical Specification
+# Groundswell — Technical Specification
 
 **Version 1.0 · 2026-10-15 · Google Cloud Hackathon Submission**
 
@@ -32,7 +32,7 @@
 
 ## 1. Executive summary
 
-**RetailPulse AI is a two-sided agentic commerce platform built on the Gemini Enterprise Agent
+**Groundswell is a two-sided agentic commerce platform built on the Gemini Enterprise Agent
 Platform.** One closed loop serves both the shopper and the retailer.
 
 | Side | What agents do | What they are *not permitted* to do |
@@ -51,7 +51,7 @@ graph nodes with zero model calls. §5 shows the code.
 
 ### What makes this shortlist-worthy
 
-Most entries in this category are a chatbot over a product table. RetailPulse shows, on screen,
+Most entries in this category are a chatbot over a product table. Groundswell shows, on screen,
 in under five minutes:
 
 1. **Two different guardrails rejecting two different attacks, live** — a prompt injection blocked
@@ -72,11 +72,11 @@ in under five minutes:
 | Phantom inventory | $1.1T globally | Shelf state and system state diverge |
 | Agentic commerce without authorization | — (emerging) | No cryptographic record of what a shopper actually consented to |
 
-**The specific gap RetailPulse closes:** a product goes viral Tuesday, the shelf is empty
+**The specific gap Groundswell closes:** a product goes viral Tuesday, the shelf is empty
 Thursday, the reorder lands three weeks later into dead demand. Every retailer runs a forecast.
 None of them see Tuesday.
 
-> **Baseline forecasting answers "what did this SKU do?" RetailPulse also answers "what is about
+> **Baseline forecasting answers "what did this SKU do?" Groundswell also answers "what is about
 > to happen to it?"**
 
 ---
@@ -88,7 +88,7 @@ Google Cloud judges score against the platform. This table is **slide 3 of the d
 Legend: 🟢 built and demonstrated · 🔵 implemented as an equivalent control, substitution named ·
 ⚪ architecture only, not deployed
 
-| Gemini Enterprise Agent Platform component | RetailPulse usage | Status |
+| Gemini Enterprise Agent Platform component | Groundswell usage | Status |
 |---|---|---|
 | **Agent Development Kit (ADK) 2.0** | Workflow Runtime graph; 5 agents; deterministic non-LLM nodes for validator + fusion | 🟢 |
 | **Agent-to-Agent (A2A) Orchestration** | Inventory Agent is a separate Cloud Run service, discovered via `/.well-known/agent.json`, called over the wire | 🟢 |
@@ -110,7 +110,7 @@ Legend: 🟢 built and demonstrated · 🔵 implemented as an equivalent control
 
 ### How to present the 🔵 rows — this is a strength, not an apology
 
-> *"RetailPulse runs on a shared corporate project where we cannot mint service accounts. So
+> *"Groundswell runs on a shared corporate project where we cannot mint service accounts. So
 > where the platform offers a managed control, we implemented the same control a level down and
 > we'll name the substitution every time. Agent Identity would give each agent a cryptographic ID;
 > we can't grant IAM roles, so our agent runtimes hold no database client at all — here's the
@@ -125,7 +125,7 @@ thought about production. **Say the limitation before a judge finds it.**
 
 ```
                          ┌───────────────────────────────┐
-  Shopper ──HTTPS──────► │  Cloud Run: rp-api (public)   │
+  Shopper ──HTTPS──────► │  Cloud Run: gs-api (public)   │
                          │  FastAPI · SSE agent traces   │
                          └───────────────┬───────────────┘
                                          │
@@ -151,7 +151,7 @@ thought about production. **Say the limitation before a judge finds it.**
                    A2A over the wire               │ MCP (only data path)
                                │                   │
           ┌────────────────────▼──────┐  ┌─────────▼──────────────────┐
-          │ Cloud Run: rp-inventory   │  │ Cloud Run: rp-mcp          │
+          │ Cloud Run: gs-inventory   │  │ Cloud Run: gs-mcp          │
           │ (ingress: internal only)  │  │ (ingress: internal only)   │
           │ /.well-known/agent.json   │  │ 9 tools · parameterized SQL│
           └───────────────────────────┘  └─────────┬──────────────────┘
@@ -162,7 +162,7 @@ thought about production. **Say the limitation before a judge finds it.**
               │   BigQuery    │          │    Firestore    │  │  Vertex AI  │
               │ catalog·sales │          │ inventory·carts │  │ Gemini 3.1  │
               │ VECTOR_SEARCH │          │ mandates·POs    │  │ embeddings  │
-              │ ARIMA_PLUS    │          │ (retailpulse-db)│  └─────────────┘
+              │ ARIMA_PLUS    │          │ (groundswell-db)│  └─────────────┘
               │ social_signals│          └─────────────────┘
               │ agent_audit   │
               └───────────────┘
@@ -250,13 +250,13 @@ path we use.
 
 ```
 POST https://modelarmor.us-central1.rep.googleapis.com/v1/
-     projects/ctoteam/locations/us-central1/templates/rp-armor:sanitizeUserPrompt
-POST .../templates/rp-armor:sanitizeModelResponse
+     projects/ctoteam/locations/us-central1/templates/gs-armor:sanitizeUserPrompt
+POST .../templates/gs-armor:sanitizeModelResponse
 ```
 
 - **Ingress** — `sanitizeUserPrompt` screens shopper input *before* it reaches the orchestrator
 - **Egress** — `sanitizeModelResponse` screens model output *before* it reaches the browser
-- **Config** — a Model Armor **template** (`rp-armor`) holds the filter settings; **floor
+- **Config** — a Model Armor **template** (`gs-armor`) holds the filter settings; **floor
   settings** can enforce an organization-wide minimum that a template cannot weaken
 
 > ⚠️ **Known limitation to state out loud:** the injection/jailbreak filter inspects up to
@@ -270,13 +270,13 @@ about 30 minutes and makes the security story concrete.
 
 | Service | Ingress setting | Authentication | Rationale |
 |---|---|---|---|
-| `rp-api` | `all` | Public (demo) | The browser must reach it |
-| `rp-mcp` | **`internal`** | Requires ID token | **The data path is not reachable from the internet** |
-| `rp-inventory-a2a` | **`internal`** | Requires ID token | A2A is service-to-service only |
-| `rp-event-consumer` | **`internal`** | Requires ID token | Triggered by pipeline, never by a user |
+| `gs-api` | `all` | Public (demo) | The browser must reach it |
+| `gs-mcp` | **`internal`** | Requires ID token | **The data path is not reachable from the internet** |
+| `gs-inventory-a2a` | **`internal`** | Requires ID token | A2A is service-to-service only |
+| `gs-event-consumer` | **`internal`** | Requires ID token | Triggered by pipeline, never by a user |
 
 ```bash
-gcloud run deploy rp-mcp --ingress=internal --no-allow-unauthenticated --region=us-central1
+gcloud run deploy gs-mcp --ingress=internal --no-allow-unauthenticated --region=us-central1
 ```
 
 > **Demo line:** *"The MCP server holds every database credential in this system, and it has no
@@ -309,7 +309,7 @@ Agent Gateway is the platform's *"air traffic control"* — unified, secure conn
 agents and tools across environments, enforcing consistent security policy, with Model Armor
 integrated.
 
-| | Agent Gateway (production) | RetailPulse (shipped) |
+| | Agent Gateway (production) | Groundswell (shipped) |
 |---|---|---|
 | Single connectivity chokepoint | ✅ managed | ✅ MCP server — the only data path |
 | Policy enforcement | ✅ managed | ✅ `guards.py` — validation, rate limits, audit emit |
@@ -475,7 +475,7 @@ land while judges watch, which is the proof it is not pre-seeded.
 
 ## 10. Data platform
 
-### BigQuery — dataset `ctoteam.retailpulse` (`us-central1`)
+### BigQuery — dataset `ctoteam.groundswell` (`us-central1`)
 
 | Table | Role |
 |---|---|
@@ -512,7 +512,7 @@ as `FLOAT64 REPEATED`, and query with `VECTOR_SEARCH(..., distance_type => 'COSI
 Road beats trail — the ranking is semantically correct. **This is a good Q&A story:** we hit a
 permission wall, understood which half of the feature actually needed it, and routed around it.
 
-### Firestore (`retailpulse-db`, Native mode, `us-central1`)
+### Firestore (`groundswell-db`, Native mode, `us-central1`)
 
 `inventory/` · `sessions/` · `carts/` · `mandates/` · `purchase_orders/`
 
@@ -575,7 +575,7 @@ and that is exactly the kind of overclaim that gets a team dropped at shortlisti
 
 ### Act 0 — The claim (15s)
 
-> *"Retailers lose $300 billion a year to forecasts that can only see the past. RetailPulse is a
+> *"Retailers lose $300 billion a year to forecasts that can only see the past. Groundswell is a
 > two-sided agentic commerce platform: agents help shoppers buy, and agents help the retailer
 > stock — and neither one is allowed to touch the database or approve a payment."*
 
@@ -617,7 +617,7 @@ it and the model had no authority to approve it."*
 - Deterministic fusion applies a **capped** surge multiplier to the ARIMA baseline
 - Manager dashboard has **already lit up**
 
-| | Baseline ARIMA *(what every retailer runs today)* | RetailPulse |
+| | Baseline ARIMA *(what every retailer runs today)* | Groundswell |
 |---|---|---|
 | 7-day forecast | 31 units | **142 units** |
 | Reorder | 40 | **160** |
@@ -654,7 +654,7 @@ argument.**
 
 | # | Slide | Content | Source |
 |---|---|---|---|
-| 1 | **Title** | RetailPulse AI — *Agents propose. Deterministic code disposes.* | §1 |
+| 1 | **Title** | Groundswell — *Agents propose. Deterministic code disposes.* | §1 |
 | 2 | **The $300B blind spot** | Batch forecasts see only the past; the viral-to-empty-shelf timeline | §2 |
 | 3 | **Platform alignment** | The 🟢/🔵/⚪ table — *this is the scoring slide* | §3 |
 | 4 | **Architecture** | One diagram, the closed loop, both rejection points marked | §4 |

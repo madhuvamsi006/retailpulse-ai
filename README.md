@@ -1,4 +1,4 @@
-# RetailPulse AI
+# Groundswell
 
 **Agentic Commerce Intelligence Platform** — a hackathon prototype.
 
