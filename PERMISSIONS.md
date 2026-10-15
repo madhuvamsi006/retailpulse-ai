@@ -171,7 +171,7 @@ Two details worth knowing:
 |---|---|---|
 | BigQuery dataset | `ctoteam.groundswell` | **`us-central1`** — not `US` |
 | Firestore Native DB | `groundswell-db` | `us-central1`. Pass `database="groundswell-db"` in **every** client call. |
-| BQ connection | `ctoteam.us-central1.groundswell-conn` | Created, but **unusable** — see below |
+| BQ connection | ~~`ctoteam.us-central1.retailpulse-conn`~~ | **Abandoned — not recreated under the new name.** Unusable (see below), and the Python embedding path superseded it. |
 
 ### 🔴 Confirmed blocker: `ML.GENERATE_EMBEDDING` is dead
 
