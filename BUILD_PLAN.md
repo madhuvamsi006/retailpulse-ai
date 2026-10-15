@@ -43,14 +43,30 @@ The demo script **is** the spec. Nothing gets built that doesn't appear here.
 
 🎯 *Judge takeaway:* this is a real authorization protocol with real failure modes, not a "Buy now" dialog with an LLM behind it.
 
-**Act 3 — The loop closes on its own (60s)**
+**Act 3 — A trend breaks and the loop closes on its own (90s) ← the differentiator**
 
-- That purchase + a seeded weekend sales spike publishes to **Pub/Sub**
-- Cloud Run consumer updates Firestore, recomputes risk from BigQuery ML forecast
-- **Switch to the Manager dashboard — it has already lit up, unprompted:**
-  > ⚠️ *Nike Pegasus 41, size 10 / 2E, Store 04 — projected stockout in 4 days. 12 units of demand at risk ≈ **$1,680**. Confidence: 0.81 (14 weeks of history, no seasonal adjustment available).*
+See [SOCIAL_SIGNALS.md](./SOCIAL_SIGNALS.md) for the full design.
 
-🎯 *Judge takeaway:* nobody asked a question. The system reacted to data.
+- Overnight, the signal ingester pulls the last 24h of social posts. **Nobody asks it anything.**
+- Signal Agent (Gemini) reads **raw post text** → structured signal: entity, momentum, geo, confidence
+- SKU Mapper (code, reusing the Day 0 embeddings) resolves *"those grey cushioned runners"* → Pegasus 41
+- Deterministic fusion applies a **capped** surge multiplier to the ARIMA_PLUS baseline
+- **Switch to the Manager dashboard — it has already lit up:**
+  > ⚠️ *Nike Pegasus 41, size 10 / 2E, Store 04 — demand surge detected. Baseline forecast 31 units; fused forecast **142**. Projected stockout in 4 days. Confidence 0.81, surge 2.4x (capped at 4x), corroborated across 2 sources.*
+
+**Then the money shot — split the panel:**
+
+| | Baseline (what every retailer runs today) | RetailPulse |
+|---|---|---|
+| 7-day forecast | 31 units | **142 units** |
+| Reorder | 40 | **160** |
+| Outcome | Stockout day 4 | Demand captured |
+| **Revenue impact** | **−$25,200** | **$0** |
+
+> *"One SKU. One week. $25,200. There are 1,200 variants in this catalog."*
+
+🎯 *Judge takeaway:* nobody asked a question, and the gap between the industry-standard forecast
+and ours is shown **in dollars**, not asserted on a slide.
 
 **Act 4 — Agentic replenishment under human authority (45s)**
 
@@ -85,6 +101,7 @@ Ruthless cuts are the difference between a demo and an apology.
 | Pub/Sub → Cloud Run, **one event type** | Makes "event-driven" true instead of aspirational |
 | Firestore transactions for stock reservation | Atomic reservations without a fourth datastore |
 | React agent-trace panel (SSE) | Makes invisible multi-agent work *visible*. Do not cut this. |
+| **Social demand signals → fused forecast** | The $300B claim. Baseline ARIMA is what everyone already runs; the fused contrast is the pitch. See SOCIAL_SIGNALS.md |
 
 ### ❌ CUT — and defend the cut if asked
 
@@ -93,7 +110,8 @@ Ruthless cuts are the difference between a demo and an apology.
 | **Cloud SQL** | Firestore transactions give you atomic reserve-stock. A fourth datastore is a day you don't have. *If asked:* "Firestore transactions are ACID within a document set; Cloud SQL is the right call at real order volume and it's a swap behind the `create_cart` tool." |
 | **UCP** | Too new, and AP2 already carries the commerce-authorization narrative. A second protocol logo adds zero demo seconds. |
 | **Cross-store transfer optimization (idea C)** | Looks great in a doc, costs a day in routing/cost modeling. Ship a *read-only* "also available at Store 07, 2.3km" badge — 30 minutes, 80% of the perceived value. |
-| **Multiple event types** | One event type (sales spike → risk recompute) proves the architecture. Five prove nothing extra. |
+| **Multiple event types** | One event type (signal ingest → risk recompute) proves the architecture. Five prove nothing extra. |
+| **Live TikTok / Reddit / X APIs** | Keys, approval queues, quotas, and corporate TLS interception. The *corpus* is seeded; the *extraction and fusion* are real. Say so out loud — see SOCIAL_SIGNALS.md §3. |
 | **Real payment provider** | Sandbox only, and **say so out loud in the demo.** Judges respect the disclosure and penalize the discovery. |
 | **Auth / multi-tenancy / user accounts** | Hardcode two personas: `customer_demo` and `manager_demo`. |
 
@@ -308,11 +326,11 @@ Cut from the bottom. Never cut upward past a line you haven't reached.
 1. Explainability polish (confidence badges, assumption text)
 2. Cross-store availability badge
 3. Merchandising Agent → replace with a pre-computed PO draft, approval flow stays real
-4. Pub/Sub → replace with a "Simulate weekend spike" button that calls the consumer directly *(the architecture claim gets softer; say "event-driven, triggered manually here for demo timing")*
+4. Pub/Sub → **superseded.** Social-signal ingestion is the trigger now, and it needs no topic-creation permission (SOCIAL_SIGNALS.md §6). Run it on a timer or a button; the narrative gets stronger, not weaker.
 5. React manager dashboard → Streamlit
 6. BigQuery ML forecast → simple velocity-based linear projection *(still honest, just less sophisticated)*
 7. — **hard floor** —
-8. **Never cut:** AP2 tamper rejection · the A2A hop · the agent trace panel · MCP-only data access
+8. **Never cut:** AP2 tamper rejection · the A2A hop · the agent trace panel · MCP-only data access · **the baseline-vs-fused $ delta (G8.5)**
 
 Items 1–6 are survivable losses. Items below the floor are the pitch itself.
 
@@ -338,6 +356,7 @@ Most hackathon entries in this category will be a chatbot over a product table w
 This one shows, on screen, in under four minutes:
 
 - **A rejection.** Authorization that actually refuses a tampered cart — almost nobody demos a guardrail *working*
+- **A forecast that beats the industry standard, in dollars.** Baseline vs. fused, side by side, on one SKU — the $300B problem made concrete
 - **An unprompted alert.** The system reacting to data with no human in the loop
 - **A visible agent trace** across a real service boundary
 - **A human approving spend** with a cryptographic audit trail behind it
