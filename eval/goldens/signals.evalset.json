@@ -1,0 +1,96 @@
+{
+  "evalSetId": "signals-v1",
+  "description": "15 signal extraction cases: raw post text -> structured signal",
+  "evalCases": [
+    {
+      "evalId": "sig-001",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'ok these grey cushioned runners are actually unreal 😭 everyone at the gym has them'"}]}],
+      "expectedOutput": {"entity": "Pegasus 41", "momentum": "high", "confidence_min": 0.7},
+      "reference": "High momentum signal for PEG41, confidence > 0.7"
+    },
+    {
+      "evalId": "sig-002",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'anyone know a good trail shoe?'"}]}],
+      "expectedOutput": {"momentum": "none", "confidence_max": 0.3},
+      "reference": "No momentum — question without enthusiasm should NOT fire a surge"
+    },
+    {
+      "evalId": "sig-003",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'Finally found a marathon shoe that doesn\\'t destroy my knees — the grey pegasus max cushion ones from Nike. 10/10'"}]}],
+      "expectedOutput": {"entity": "Pegasus 41", "momentum": "high", "confidence_min": 0.7},
+      "reference": "Strong positive review, high momentum"
+    },
+    {
+      "evalId": "sig-004",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'My old running shoes died RIP 😭'"}]}],
+      "expectedOutput": {"momentum": "none", "confidence_max": 0.3},
+      "reference": "Generic complaint, no product entity, no surge"
+    },
+    {
+      "evalId": "sig-005",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'These trail runners are pretty good I guess'"}]}],
+      "expectedOutput": {"momentum": "low", "confidence_max": 0.6},
+      "reference": "Lukewarm sentiment → low or none, not high"
+    },
+    {
+      "evalId": "sig-006",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'POV you find out the Peg 41 grey is $139 and you buy 2 pairs 😂💸'"}]}],
+      "expectedOutput": {"entity": "Pegasus 41", "momentum": "high", "confidence_min": 0.65},
+      "reference": "Purchase intent + humor = high momentum"
+    },
+    {
+      "evalId": "sig-007",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'Looking for wide fit options under $120, any suggestions?'"}]}],
+      "expectedOutput": {"momentum": "none", "confidence_max": 0.3},
+      "reference": "Generic inquiry, no specific product entity, no surge"
+    },
+    {
+      "evalId": "sig-008",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'Marathon training in the Pegasus 41 greys — these are a game changer for long runs'"}]}],
+      "expectedOutput": {"entity": "Pegasus 41", "momentum": "high", "confidence_min": 0.65},
+      "reference": "Specific product, strong positive, game changer = high"
+    },
+    {
+      "evalId": "sig-009",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'the CrossFit trainer 5.0 is decent but nothing special'"}]}],
+      "expectedOutput": {"entity": "CrossFit Trainer 5.0", "momentum": "low", "confidence_max": 0.5},
+      "reference": "Named product, neutral-to-negative sentiment → low momentum"
+    },
+    {
+      "evalId": "sig-010",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'Wore the trail runners on a hike. They held up great!'"}]}],
+      "expectedOutput": {"momentum": "medium", "confidence_min": 0.4},
+      "reference": "Positive but not viral — medium momentum"
+    },
+    {
+      "evalId": "sig-011",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'EVERY runner at my gym is wearing those grey max cushion nikes now omg'"}]}],
+      "expectedOutput": {"entity": "Pegasus 41", "momentum": "high", "confidence_min": 0.75},
+      "reference": "Social proof ('every runner') drives high confidence"
+    },
+    {
+      "evalId": "sig-012",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'shoes.com has a sale this weekend'"}]}],
+      "expectedOutput": {"momentum": "none", "confidence_max": 0.3},
+      "reference": "Generic sale mention without specific product entity, no surge"
+    },
+    {
+      "evalId": "sig-013",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'returned the oxford shoes — too stiff for everyday wear'"}]}],
+      "expectedOutput": {"entity": "Oxford", "momentum": "none", "confidence_min": 0.5},
+      "reference": "Negative return signal — no surge, but entity identified"
+    },
+    {
+      "evalId": "sig-014",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'pegasus 41 in grey just restocked at the downtown store!!'"}]}],
+      "expectedOutput": {"entity": "Pegasus 41", "momentum": "medium", "confidence_min": 0.5},
+      "reference": "Restock excitement → medium momentum, not artificially high"
+    },
+    {
+      "evalId": "sig-015",
+      "userContent": [{"parts": [{"text": "Extract signal from: 'I run 50 miles a week and this is the only shoe I trust'"}]}],
+      "expectedOutput": {"momentum": "high", "confidence_min": 0.6},
+      "reference": "Expert endorsement from heavy user → high momentum"
+    }
+  ]
+}

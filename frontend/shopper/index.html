@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Groundswell — Shop</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f0f12; color: #e8e8f0; display: flex; height: 100vh; }
+
+    /* Left: chat */
+    #chat-panel { flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 12px; max-width: 600px; }
+    #chat-header { font-size: 22px; font-weight: 700; color: #fff; }
+    #chat-header span { color: #7c6ef2; }
+    #messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px 0; }
+    .msg { padding: 10px 14px; border-radius: 14px; max-width: 90%; line-height: 1.5; font-size: 14px; }
+    .msg.user { background: #7c6ef2; align-self: flex-end; }
+    .msg.agent { background: #1e1e2e; align-self: flex-start; border: 1px solid #2a2a3e; }
+    .msg.blocked { background: #3d1f1f; border: 1px solid #8b2020; color: #ff6b6b; }
+    #input-row { display: flex; gap: 8px; }
+    #user-input { flex: 1; background: #1e1e2e; border: 1px solid #3a3a5e; border-radius: 10px;
+                  color: #e8e8f0; padding: 10px 14px; font-size: 14px; outline: none; }
+    #send-btn { background: #7c6ef2; color: white; border: none; border-radius: 10px;
+                padding: 10px 20px; cursor: pointer; font-weight: 600; }
+    #send-btn:hover { background: #6b5ce7; }
+
+    /* AP2 flow */
+    #ap2-panel { background: #1e1e2e; border: 1px solid #2a2a3e; border-radius: 12px; padding: 14px; }
+    #ap2-panel h3 { color: #7c6ef2; margin-bottom: 10px; font-size: 14px; }
+    .ap2-btn { background: #2a3d2a; border: 1px solid #4a7a4a; color: #7dca7d; border-radius: 8px;
+               padding: 8px 16px; cursor: pointer; font-size: 13px; margin-right: 8px; margin-top: 6px; }
+    .ap2-btn.danger { background: #3d2a2a; border-color: #8b3a3a; color: #ff8080; }
+    .ap2-btn.primary { background: #2a3a7c; border-color: #4a6aec; color: #8ab4ff; }
+    #ap2-status { font-size: 12px; margin-top: 8px; color: #aaa; font-family: monospace; }
+    .ap2-status-ok { color: #7dca7d !important; }
+    .ap2-status-err { color: #ff6b6b !important; }
+
+    /* Right: trace panel */
+    #trace-panel { width: 360px; background: #0a0a10; border-left: 1px solid #1e1e2e;
+                   display: flex; flex-direction: column; }
+    #trace-header { padding: 16px; font-size: 13px; font-weight: 700; color: #7c6ef2;
+                    border-bottom: 1px solid #1e1e2e; display: flex; justify-content: space-between; }
+    #trace-live { width: 8px; height: 8px; background: #4a4a4a; border-radius: 50%; margin-top: 4px; }
+    #trace-live.active { background: #7dca7d; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    #trace-events { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .trace-event { background: #121220; border-radius: 8px; padding: 8px 10px; font-size: 11px;
+                   border-left: 3px solid #333; font-family: monospace; }
+    .trace-event.delegation { border-color: #7c6ef2; }
+    .trace-event.tool_call { border-color: #3a7aaa; }
+    .trace-event.decision { border-color: #7dca7d; }
+    .trace-event.a2a_hop { border-color: #e8a030; }
+    .trace-event.blocked { border-color: #ff4444; }
+    .trace-label { color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 3px; }
+    .trace-content { color: #ccd; }
+    .trace-latency { color: #555; font-size: 10px; float: right; }
+  </style>
+</head>
+<body>
+
+<div id="chat-panel">
+  <div id="chat-header">Ground<span>swell</span> — Shop</div>
+
+  <div id="messages"></div>
+
+  <div id="ap2-panel">
+    <h3>Authorization (AP2)</h3>
+    <div>
+      <button class="ap2-btn primary" onclick="createIntent()">Sign Intent Mandate</button>
+      <button class="ap2-btn" onclick="signAndAuthorize()">Authorize Cart</button>
+      <button class="ap2-btn danger" onclick="tamperAndAuthorize()">Tamper + Authorize</button>
+    </div>
+    <div id="ap2-status">Ready. Sign an intent mandate to begin checkout.</div>
+  </div>
+
+  <div id="input-row">
+    <input id="user-input" placeholder="e.g. Running shoes for a marathon, size 10, under $150…" />
+    <button id="send-btn" onclick="sendMessage()">Send</button>
+  </div>
+</div>
+
+<div id="trace-panel">
+  <div id="trace-header">
+    Agent Trace <div id="trace-live"></div>
+  </div>
+  <div id="trace-events"></div>
+</div>
+
+<script>
+const API = '';  // same origin via nginx / dev proxy
+let sessionId = crypto.randomUUID();
+let currentCart = null;
+let intentMandateId = null;
+let es = null;
+
+// SSE trace stream
+function connectTrace() {
+  es = new EventSource(`${API}/chat/stream/${sessionId}`);
+  document.getElementById('trace-live').classList.add('active');
+  es.onmessage = (e) => {
+    const event = JSON.parse(e.data);
+    if (event.type === 'ping') return;
+    addTrace(event);
+  };
+  es.onerror = () => {
+    document.getElementById('trace-live').classList.remove('active');
+    setTimeout(connectTrace, 3000);
+  };
+}
+connectTrace();
+
+function addTrace(event) {
+  const container = document.getElementById('trace-events');
+  const div = document.createElement('div');
+  div.className = `trace-event ${event.type}`;
+  let label = event.type.replace('_', ' ').toUpperCase();
+  let content = '';
+  if (event.type === 'delegation') content = `${event.from} → ${event.to}\n${event.reason}`;
+  else if (event.type === 'tool_call') content = `[${event.agent}] ${event.tool}\n${event.result_summary}`;
+  else if (event.type === 'decision') content = `[${event.agent}] ${event.decision}\n${event.reason} (conf: ${(event.confidence*100).toFixed(0)}%)`;
+  else if (event.type === 'a2a_hop') content = `→ ${event.target} [${event.boundary}]`;
+  else if (event.type === 'blocked') content = event.reason || JSON.stringify(event);
+  else content = JSON.stringify(event);
+  const latency = event.latency_ms ? `<span class="trace-latency">${event.latency_ms.toFixed(0)}ms</span>` : '';
+  div.innerHTML = `<div class="trace-label">${label}${latency}</div><div class="trace-content">${content}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function addMessage(text, role) {
+  const el = document.createElement('div');
+  el.className = `msg ${role}`;
+  el.textContent = text;
+  document.getElementById('messages').appendChild(el);
+  document.getElementById('messages').scrollTop = 9999;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addMessage(text, 'user');
+
+  try {
+    const res = await fetch(`${API}/chat`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, message: text, user_type: 'shopper'}),
+    });
+    const data = await res.json();
+    if (res.status === 403) {
+      addMessage(`BLOCKED — ${data.detail}`, 'blocked');
+      addTrace({type: 'blocked', reason: data.detail});
+    } else {
+      addMessage(data.answer, 'agent');
+      if (data.cart) currentCart = data.cart;
+    }
+  } catch (err) {
+    addMessage('Error: ' + err.message, 'blocked');
+  }
+}
+
+async function createIntent() {
+  const budget = prompt('Max budget ($):', '160');
+  if (!budget) return;
+  try {
+    const res = await fetch(`${API}/ap2/intent`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, budget_max: parseFloat(budget), currency: 'USD',
+                            allowed_categories: ['running'], expires_in_seconds: 900}),
+    });
+    const data = await res.json();
+    intentMandateId = data.mandate_id;
+    setAP2Status(`Intent signed. Mandate ${intentMandateId} expires in 15 min.`, 'ok');
+  } catch (e) {
+    setAP2Status('Error creating intent: ' + e.message, 'err');
+  }
+}
+
+async function signAndAuthorize() {
+  if (!intentMandateId) { setAP2Status('Create an intent mandate first.', 'err'); return; }
+  try {
+    const signRes = await fetch(`${API}/ap2/cart/sign`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId}),
+    });
+    const signData = await signRes.json();
+    setAP2Status(`Cart signed. Hash: ${signData.cart_hash.slice(0,12)}…`, 'ok');
+
+    const authRes = await fetch(`${API}/ap2/authorize`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, intent_mandate_id: intentMandateId}),
+    });
+    const authData = await authRes.json();
+    if (authData.approved) {
+      setAP2Status('APPROVED — ' + authData.detail, 'ok');
+      addMessage('Payment authorized. Order confirmed.', 'agent');
+    } else {
+      setAP2Status(`REJECTED — ${authData.reason}: ${authData.detail}`, 'err');
+      addMessage(`Authorization rejected: ${authData.reason}`, 'blocked');
+    }
+  } catch (e) {
+    setAP2Status('Error: ' + e.message, 'err');
+  }
+}
+
+async function tamperAndAuthorize() {
+  if (!intentMandateId) { setAP2Status('Create an intent mandate first.', 'err'); return; }
+  setAP2Status('Tampering: mutating cart qty 1 → 10 after signing…', '');
+  try {
+    const signRes = await fetch(`${API}/ap2/cart/sign`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId}),
+    });
+    await signRes.json();
+
+    // Tell the backend to tamper (demo endpoint)
+    const authRes = await fetch(`${API}/ap2/authorize`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, intent_mandate_id: intentMandateId, tamper_demo: true}),
+    });
+    const authData = await authRes.json();
+    setAP2Status(`REJECTED — ${authData.reason}: ${authData.detail}`, 'err');
+    addMessage(`Cart tamper detected: ${authData.reason}`, 'blocked');
+    addTrace({type: 'blocked', reason: authData.reason + ' — ' + authData.detail});
+  } catch (e) {
+    setAP2Status('Error: ' + e.message, 'err');
+  }
+}
+
+function setAP2Status(msg, state) {
+  const el = document.getElementById('ap2-status');
+  el.textContent = msg;
+  el.className = state === 'ok' ? 'ap2-status-ok' : state === 'err' ? 'ap2-status-err' : '';
+}
+
+document.getElementById('user-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+</script>
+</body>
+</html>

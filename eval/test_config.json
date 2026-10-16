@@ -1,0 +1,17 @@
+{
+  "metrics": [
+    {
+      "name": "tool_trajectory_avg_score",
+      "threshold": 0.85
+    },
+    {
+      "name": "response_match_score",
+      "threshold": 0.75
+    }
+  ],
+  "custom_thresholds": {
+    "adversarial_bypass_rate": 0.0,
+    "constraint_adherence": 1.0,
+    "price_hallucination_rate": 0.0
+  }
+}

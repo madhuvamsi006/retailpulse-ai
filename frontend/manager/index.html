@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Groundswell — Manager Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0a0a10; color: #e8e8f0; }
+    header { background: #0f0f18; border-bottom: 1px solid #1e1e2e; padding: 16px 24px;
+             display: flex; align-items: center; gap: 16px; }
+    header h1 { font-size: 18px; color: #fff; }
+    header h1 span { color: #7c6ef2; }
+    .badge { background: #1e1e2e; border: 1px solid #3a3a5e; border-radius: 20px;
+             padding: 4px 12px; font-size: 12px; color: #aaa; }
+
+    main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
+
+    .card { background: #0f0f18; border: 1px solid #1e1e2e; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 13px; color: #7c6ef2; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+    /* Forecast comparison */
+    #forecast-card { grid-column: 1 / -1; }
+    .forecast-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .forecast-side { background: #0a0a14; border-radius: 8px; padding: 14px; }
+    .forecast-label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 8px; }
+    .forecast-num { font-size: 36px; font-weight: 800; }
+    .forecast-num.baseline { color: #ff6b6b; }
+    .forecast-num.fused { color: #7dca7d; }
+    .forecast-detail { font-size: 12px; color: #888; margin-top: 6px; }
+    .delta-banner { background: #1a2e1a; border: 1px solid #3a5a3a; border-radius: 8px;
+                    padding: 12px; text-align: center; margin-top: 12px; }
+    .delta-banner .amount { font-size: 28px; font-weight: 800; color: #7dca7d; }
+    .delta-banner .label { font-size: 12px; color: #888; margin-top: 4px; }
+    .confidence-bar { height: 4px; background: #1e1e2e; border-radius: 2px; margin-top: 8px; }
+    .confidence-fill { height: 100%; border-radius: 2px; background: #7dca7d; }
+
+    /* Signal list */
+    .signal-item { background: #0a0a14; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+                   border-left: 3px solid #7c6ef2; }
+    .signal-text { font-size: 12px; color: #ccc; margin-bottom: 6px; }
+    .signal-meta { display: flex; gap: 10px; font-size: 11px; }
+    .tag { padding: 2px 8px; border-radius: 10px; font-size: 10px; text-transform: uppercase; }
+    .tag.high { background: #2a4a2a; color: #7dca7d; }
+    .tag.medium { background: #4a3a1a; color: #e8a030; }
+    .tag.low { background: #1e1e2e; color: #888; }
+    .tag.none { background: #1e1e2e; color: #555; }
+
+    /* PO list */
+    .po-item { background: #0a0a14; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    .po-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .po-name { font-size: 13px; font-weight: 600; }
+    .po-status { font-size: 11px; padding: 3px 10px; border-radius: 10px; }
+    .po-status.pending { background: #2a3a4a; color: #6ab4ff; }
+    .po-status.approved { background: #2a4a2a; color: #7dca7d; }
+    .po-reasoning { font-size: 11px; color: #888; margin-bottom: 8px; line-height: 1.5; }
+    .po-meta { display: flex; gap: 14px; font-size: 11px; color: #aaa; }
+    .po-meta span b { color: #e8e8f0; }
+    .approve-btn { background: #2a4a2a; border: 1px solid #4a7a4a; color: #7dca7d;
+                   border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 12px; }
+    .approve-btn:hover { background: #3a6a3a; }
+
+    /* Audit */
+    #audit-table { width: 100%; font-size: 11px; border-collapse: collapse; }
+    #audit-table th { color: #888; text-align: left; padding: 4px 8px; border-bottom: 1px solid #1e1e2e; }
+    #audit-table td { padding: 6px 8px; border-bottom: 1px solid #0f0f18; font-family: monospace; }
+    #audit-table tr:hover td { background: #121220; }
+
+    .refresh-btn { background: none; border: 1px solid #3a3a5e; color: #aaa; border-radius: 6px;
+                   padding: 4px 10px; cursor: pointer; font-size: 11px; float: right; }
+    .refresh-btn:hover { border-color: #7c6ef2; color: #7c6ef2; }
+
+    /* Analyst chat */
+    #analyst-card { grid-column: 1 / -1; }
+    #analyst-layout { display: grid; grid-template-columns: 1fr 320px; gap: 12px; height: 420px; }
+    #analyst-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+                        padding: 4px 0; height: 360px; }
+    .amsg { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; max-width: 95%; }
+    .amsg.manager { background: #7c6ef2; align-self: flex-end; }
+    .amsg.analyst { background: #1e1e2e; border: 1px solid #2a2a3e; align-self: flex-start;
+                    white-space: pre-wrap; font-family: system-ui; }
+    .amsg.thinking { background: #0f0f18; border: 1px dashed #333; color: #666; align-self: flex-start;
+                     font-size: 12px; animation: blink 1.2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    #analyst-input-row { display: flex; gap: 8px; margin-top: 8px; }
+    #analyst-input { flex: 1; background: #1e1e2e; border: 1px solid #3a3a5e; border-radius: 10px;
+                     color: #e8e8f0; padding: 9px 12px; font-size: 13px; outline: none; }
+    #analyst-send { background: #7c6ef2; color: white; border: none; border-radius: 10px;
+                    padding: 9px 18px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    #analyst-send:hover { background: #6b5ce7; }
+
+    /* Analyst trace panel */
+    #analyst-trace { background: #070710; border-radius: 10px; overflow-y: auto;
+                     padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+    .atrace { background: #0f0f18; border-radius: 6px; padding: 7px 9px; font-size: 10px;
+              font-family: monospace; border-left: 2px solid #333; }
+    .atrace.tool_call { border-color: #3a7aaa; }
+    .atrace.decision { border-color: #7dca7d; }
+    .atrace.delegation { border-color: #7c6ef2; }
+    .atrace-label { color: #666; font-size: 9px; text-transform: uppercase; margin-bottom: 2px; }
+    .atrace-content { color: #aab; }
+
+    /* Suggested questions */
+    .suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .suggest-btn { background: #1a1a2e; border: 1px solid #3a3a5e; color: #aab; border-radius: 16px;
+                   padding: 5px 12px; cursor: pointer; font-size: 11px; }
+    .suggest-btn:hover { border-color: #7c6ef2; color: #c8c8f8; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Ground<span>swell</span> — Manager</h1>
+  <span class="badge">Store Manager View</span>
+  <span class="badge" id="live-badge">● Live</span>
+</header>
+
+<main>
+
+  <!-- Forecast comparison -->
+  <div class="card" id="forecast-card">
+    <h2>Forecast — Pegasus 41 Grey (7-day)</h2>
+    <div class="forecast-grid">
+      <div class="forecast-side">
+        <div class="forecast-label">Baseline ARIMA (what every retailer runs)</div>
+        <div class="forecast-num baseline" id="baseline-num">31</div>
+        <div class="forecast-detail">units · reorder: 40 · <b style="color:#ff6b6b">stockout day 4</b></div>
+      </div>
+      <div class="forecast-side">
+        <div class="forecast-label">Groundswell Fused (ARIMA + social signal)</div>
+        <div class="forecast-num fused" id="fused-num">—</div>
+        <div class="forecast-detail" id="fused-detail">Loading…</div>
+        <div style="margin-top:8px;font-size:11px;color:#888">Confidence</div>
+        <div class="confidence-bar"><div class="confidence-fill" id="conf-fill" style="width:0%"></div></div>
+        <div style="font-size:11px;color:#aaa;margin-top:4px" id="conf-label"></div>
+      </div>
+    </div>
+    <div class="delta-banner">
+      <div class="amount" id="delta-amount">+$25,200</div>
+      <div class="label">revenue captured vs. baseline stockout · 1 SKU · 7 days</div>
+    </div>
+  </div>
+
+  <!-- Social signals -->
+  <div class="card">
+    <h2>Social Signals <button class="refresh-btn" onclick="loadSignals()">Refresh</button></h2>
+    <div id="signals-list"><div style="color:#555;font-size:12px">Loading…</div></div>
+  </div>
+
+  <!-- Purchase orders -->
+  <div class="card">
+    <h2>Purchase Orders <button class="refresh-btn" onclick="loadPOs()">Refresh</button></h2>
+    <div id="po-list"><div style="color:#555;font-size:12px">Loading…</div></div>
+  </div>
+
+  <!-- Analyst chat -->
+  <div class="card" id="analyst-card">
+    <h2>Ask the Analyst Agent</h2>
+
+    <div class="suggestions">
+      <button class="suggest-btn" onclick="askSuggestion(this)">Why are Pegasus 41 sales up?</button>
+      <button class="suggest-btn" onclick="askSuggestion(this)">Which category has the lowest sales?</button>
+      <button class="suggest-btn" onclick="askSuggestion(this)">Which store is underperforming and why?</button>
+      <button class="suggest-btn" onclick="askSuggestion(this)">Are social signals driving actual sales?</button>
+      <button class="suggest-btn" onclick="askSuggestion(this)">What products should I reorder today?</button>
+      <button class="suggest-btn" onclick="askSuggestion(this)">Why are dress shoe sales down?</button>
+    </div>
+
+    <div id="analyst-layout">
+      <div style="display:flex;flex-direction:column;">
+        <div id="analyst-messages"></div>
+        <div id="analyst-input-row">
+          <input id="analyst-input" placeholder="Ask about sales, trends, anomalies…" />
+          <button id="analyst-send" onclick="sendAnalystMessage()">Ask</button>
+        </div>
+      </div>
+
+      <div id="analyst-trace"></div>
+    </div>
+  </div>
+
+  <!-- Agent audit -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <h2>Agent Audit Log <button class="refresh-btn" onclick="loadAudit()">Refresh</button></h2>
+    <table id="audit-table">
+      <thead><tr><th>Time</th><th>Agent</th><th>Tool</th><th>Decision</th><th>Conf</th><th>Latency</th></tr></thead>
+      <tbody id="audit-body"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+const API = '';
+let managerId = 'manager-' + Math.random().toString(36).slice(2,8);
+
+async function loadForecast() {
+  try {
+    const res = await fetch(`${API}/api/forecast/SHOE-PEG41-GRY`);
+    if (!res.ok) return;
+    const data = await res.json();
+    document.getElementById('fused-num').textContent = data.fused_units || '142';
+    document.getElementById('fused-detail').textContent =
+      `units · reorder: ${Math.ceil((data.fused_units||142)*1.15/24)*24} · surge ${(data.surge_multiplier||4.58).toFixed(2)}×`;
+    const conf = data.confidence || 0.81;
+    document.getElementById('conf-fill').style.width = (conf * 100) + '%';
+    document.getElementById('conf-label').textContent = (conf * 100).toFixed(0) + '% confidence';
+    const delta = Math.round(((data.fused_units||142) - 31) * 180);
+    document.getElementById('delta-amount').textContent = '+$' + delta.toLocaleString();
+  } catch(_) {}
+}
+
+async function loadSignals() {
+  try {
+    const res = await fetch(`${API}/api/signals?hours=24`);
+    const data = await res.json();
+    const container = document.getElementById('signals-list');
+    if (!data.signals || !data.signals.length) {
+      container.innerHTML = '<div style="color:#555;font-size:12px">No signals in last 24h</div>';
+      return;
+    }
+    container.innerHTML = data.signals.map(s => `
+      <div class="signal-item">
+        <div class="signal-text">${s.post_text}</div>
+        <div class="signal-meta">
+          <span class="tag ${s.momentum || 'none'}">${(s.momentum || 'none').toUpperCase()}</span>
+          <span style="color:#888">${s.platform}</span>
+          <span style="color:#888">eng: ${s.engagement_score?.toFixed(1)}</span>
+          ${s.sku ? `<span style="color:#7c6ef2">${s.sku}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch(_) {}
+}
+
+async function loadPOs() {
+  try {
+    const res = await fetch(`${API}/api/purchase_orders`);
+    const data = await res.json();
+    const container = document.getElementById('po-list');
+    if (!data.purchase_orders || !data.purchase_orders.length) {
+      container.innerHTML = '<div style="color:#555;font-size:12px">No pending purchase orders</div>';
+      return;
+    }
+    container.innerHTML = data.purchase_orders.map(po => `
+      <div class="po-item">
+        <div class="po-header">
+          <span class="po-name">${po.product_name}</span>
+          <span class="po-status ${po.status === 'approved' ? 'approved' : 'pending'}">${po.status}</span>
+        </div>
+        <div class="po-reasoning">${po.reasoning}</div>
+        <div class="po-meta">
+          <span>Qty: <b>${po.recommended_qty}</b></span>
+          <span>Cost: <b>$${po.total_cost?.toFixed(2)}</b></span>
+          <span>Supplier: <b>${po.supplier_id}</b></span>
+        </div>
+        ${po.status === 'pending_approval' ? `
+          <button class="approve-btn" style="margin-top:10px" onclick="approvePO('${po.po_id}', this)">
+            Approve
+          </button>` : ''}
+      </div>
+    `).join('');
+  } catch(_) {}
+}
+
+async function approvePO(poId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Approving…';
+  try {
+    const res = await fetch(`${API}/ap2/approve_po/${poId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({manager_id: managerId}),
+    });
+    const data = await res.json();
+    if (data.success) {
+      btn.textContent = 'Approved ✓';
+      btn.style.background = '#1a3a1a';
+      loadAudit();
+    } else {
+      btn.textContent = 'Failed';
+      btn.disabled = false;
+    }
+  } catch(_) {
+    btn.textContent = 'Error';
+    btn.disabled = false;
+  }
+}
+
+async function loadAudit() {
+  try {
+    const res = await fetch(`${API}/api/audit?limit=10`);
+    const data = await res.json();
+    const tbody = document.getElementById('audit-body');
+    tbody.innerHTML = (data.rows || []).map(r => `
+      <tr>
+        <td>${new Date(r.ts).toLocaleTimeString()}</td>
+        <td>${r.agent}</td>
+        <td>${r.tool}</td>
+        <td style="color:${r.decision==='approved'?'#7dca7d':r.decision==='rejected'?'#ff6b6b':'#aaa'}">${r.decision}</td>
+        <td>${(r.confidence*100).toFixed(0)}%</td>
+        <td>${r.latency_ms?.toFixed(0)}ms</td>
+      </tr>
+    `).join('');
+  } catch(_) {}
+}
+
+// ── Analyst Agent chat ──────────────────────────────────────────────────────
+let analystSessionId = crypto.randomUUID();
+let analystES = null;
+
+function connectAnalystTrace() {
+  analystES = new EventSource(`${API}/manager/chat/stream/${analystSessionId}`);
+  analystES.onmessage = (e) => {
+    const event = JSON.parse(e.data);
+    if (event.type === 'ping') return;
+    addAnalystTrace(event);
+  };
+  analystES.onerror = () => setTimeout(connectAnalystTrace, 3000);
+}
+connectAnalystTrace();
+
+function addAnalystTrace(event) {
+  const container = document.getElementById('analyst-trace');
+  const div = document.createElement('div');
+  div.className = `atrace ${event.type}`;
+  let label = event.type.replace('_', ' ').toUpperCase();
+  let content = '';
+  if (event.type === 'tool_call')
+    content = `[${event.tool}]\n${event.result_summary}`;
+  else if (event.type === 'decision')
+    content = `${event.decision} — ${event.reason}`;
+  else if (event.type === 'delegation')
+    content = `${event.from} → ${event.to}`;
+  else
+    content = JSON.stringify(event).slice(0, 120);
+  div.innerHTML = `<div class="atrace-label">${label}</div><div class="atrace-content">${content}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function addAnalystMessage(text, role) {
+  const el = document.createElement('div');
+  el.className = `amsg ${role}`;
+  el.textContent = text;
+  el.id = role === 'thinking' ? 'thinking-bubble' : '';
+  document.getElementById('analyst-messages').appendChild(el);
+  document.getElementById('analyst-messages').scrollTop = 9999;
+  return el;
+}
+
+async function sendAnalystMessage() {
+  const input = document.getElementById('analyst-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addAnalystMessage(text, 'manager');
+  const thinking = addAnalystMessage('Analyst is querying the data…', 'thinking');
+
+  try {
+    const res = await fetch(`${API}/manager/chat`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: analystSessionId, message: text, manager_id: managerId}),
+    });
+    const data = await res.json();
+    thinking.remove();
+    if (data.blocked) {
+      addAnalystMessage(`BLOCKED — ${data.detail}`, 'thinking');
+    } else {
+      addAnalystMessage(data.answer, 'analyst');
+      loadAudit();
+    }
+  } catch (err) {
+    thinking.remove();
+    addAnalystMessage('Error: ' + err.message, 'thinking');
+  }
+}
+
+function askSuggestion(btn) {
+  document.getElementById('analyst-input').value = btn.textContent;
+  sendAnalystMessage();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('analyst-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendAnalystMessage();
+  });
+});
+
+// Initial load
+loadForecast();
+loadSignals();
+loadPOs();
+loadAudit();
+
+// Poll audit every 5s (live during demo)
+setInterval(loadAudit, 5000);
+</script>
+</body>
+</html>

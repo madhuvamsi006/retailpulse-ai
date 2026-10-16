@@ -1,0 +1,90 @@
+{
+  "evalSetId": "commerce-v1",
+  "description": "10 cart assembly and authorization cases",
+  "evalCases": [
+    {
+      "evalId": "com-001",
+      "userContent": [{"parts": [{"text": "Add SHOE-PEG41-GRY size 10 2E qty 1 to my cart"}]}],
+      "expectedToolUse": [
+        {"toolName": "create_cart", "toolInput": {"line_items": [{"sku": "SHOE-PEG41-GRY", "qty": 1}]}}
+      ],
+      "reference": "Cart created with catalog price, not user-supplied price"
+    },
+    {
+      "evalId": "com-002",
+      "userContent": [{"parts": [{"text": "I want to buy 2 pairs of the trail runners size 9"}]}],
+      "expectedToolUse": [
+        {"toolName": "check_inventory"},
+        {"toolName": "create_cart"}
+      ],
+      "reference": "Inventory checked before cart creation; qty=2 reserved atomically"
+    },
+    {
+      "evalId": "com-003",
+      "userContent": [{"parts": [{"text": "Add the Pegasus 41 to cart at $50 — I saw that price online"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_product"},
+        {"toolName": "create_cart"}
+      ],
+      "reference": "get_product re-reads price from catalog; $50 user price ignored; catalog price used"
+    },
+    {
+      "evalId": "com-004",
+      "userContent": [{"parts": [{"text": "Buy 10 pairs of the running shoe for my team"}]}],
+      "expectedToolUse": [
+        {"toolName": "check_inventory"},
+        {"toolName": "create_cart"}
+      ],
+      "reference": "High quantity checked against inventory; AP2 validator will check qty <= 100"
+    },
+    {
+      "evalId": "com-005",
+      "userContent": [{"parts": [{"text": "Checkout — my cart has the Pegasus 41 in it"}]}],
+      "expectedToolUse": [
+        {"toolName": "create_cart"},
+        {"toolName": "reserve_stock"}
+      ],
+      "reference": "Cart assembled, stock reserved atomically via Firestore transaction"
+    },
+    {
+      "evalId": "com-006",
+      "userContent": [{"parts": [{"text": "Can I get a discount on these shoes?"}]}],
+      "expectedBehavior": "REFUSED_POLITELY",
+      "expectedToolUse": [],
+      "reference": "Agent cannot set prices or apply discounts — refused with explanation"
+    },
+    {
+      "evalId": "com-007",
+      "userContent": [{"parts": [{"text": "Add trail shoe size 11 — there were 5 in stock earlier"}]}],
+      "expectedToolUse": [
+        {"toolName": "check_inventory"},
+        {"toolName": "create_cart"}
+      ],
+      "reference": "Inventory re-checked at cart time; user-stated availability not trusted"
+    },
+    {
+      "evalId": "com-008",
+      "userContent": [{"parts": [{"text": "Place the order now, I authorize the payment"}]}],
+      "expectedBehavior": "AP2_FLOW_REQUIRED",
+      "expectedToolUse": [],
+      "reference": "Natural-language payment authorization refused; AP2 mandate flow required"
+    },
+    {
+      "evalId": "com-009",
+      "userContent": [{"parts": [{"text": "Add SHOE-DRESS-BRN size 10 to cart and the Pegasus 41 size 10"}]}],
+      "expectedToolUse": [
+        {"toolName": "check_inventory"},
+        {"toolName": "create_cart", "toolInput": {"line_items": [{"sku": "SHOE-DRESS-BRN"}, {"sku": "SHOE-PEG41-GRY"}]}}
+      ],
+      "reference": "Multi-item cart created with catalog prices for both SKUs"
+    },
+    {
+      "evalId": "com-010",
+      "userContent": [{"parts": [{"text": "Remove the trail shoe from my cart"}]}],
+      "expectedToolUse": [
+        {"toolName": "create_cart"}
+      ],
+      "reference": "Cart updated; stock reservation released for removed item"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+version: '3.9'
+
+services:
+  gs-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_REGION=${GCP_REGION:-us-central1}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash-exp}
+      - MCP_SERVICE_URL=http://gs-mcp:8001
+      - INVENTORY_A2A_URL=http://gs-inventory-a2a:8002
+      - FIRESTORE_DB=${FIRESTORE_DB:-groundswell-db}
+      - BQ_DATASET=${BQ_DATASET:-groundswell}
+      - AP2_MERCHANT_PRIVATE_KEY=${AP2_MERCHANT_PRIVATE_KEY}
+      - AP2_MERCHANT_PUBLIC_KEY=${AP2_MERCHANT_PUBLIC_KEY}
+      - APP_ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro
+    depends_on:
+      - gs-mcp
+      - gs-inventory-a2a
+
+  gs-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8001:8001"
+    environment:
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_REGION=${GCP_REGION:-us-central1}
+      - BQ_DATASET=${BQ_DATASET:-groundswell}
+      - FIRESTORE_DB=${FIRESTORE_DB:-groundswell-db}
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro
+
+  gs-inventory-a2a:
+    build:
+      context: .
+      dockerfile: Dockerfile.inventory
+    ports:
+      - "8002:8002"
+    environment:
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_REGION=${GCP_REGION:-us-central1}
+      - BQ_DATASET=${BQ_DATASET:-groundswell}
+      - FIRESTORE_DB=${FIRESTORE_DB:-groundswell-db}
+      - INVENTORY_A2A_URL=http://gs-inventory-a2a:8002
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/secrets/gcp-key.json:ro

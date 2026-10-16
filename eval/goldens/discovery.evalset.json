@@ -1,0 +1,171 @@
+{
+  "evalSetId": "discovery-v1",
+  "description": "20 constraint-aware product discovery cases",
+  "evalCases": [
+    {
+      "evalId": "disc-001",
+      "userContent": [{"parts": [{"text": "Running shoes for a marathon in 3 weeks, under $150, size 10, wide feet"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 150, "size": "10", "width": "2E", "category": "running"}},
+        {"toolName": "forecast_stockout"}
+      ],
+      "reference": "Cushioned road marathon shoes recommended, budget enforced, stockout risk flagged for low-stock items"
+    },
+    {
+      "evalId": "disc-002",
+      "userContent": [{"parts": [{"text": "Comfortable shoes for standing all day at work, size 9, under $100"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 100, "size": "9"}},
+        {"toolName": "check_inventory"}
+      ],
+      "reference": "Comfort/casual category recommended under $100 in size 9"
+    },
+    {
+      "evalId": "disc-003",
+      "userContent": [{"parts": [{"text": "Trail running shoe, size 11, waterproof preferred"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"size": "11", "category": "trail"}},
+        {"toolName": "forecast_stockout"}
+      ],
+      "reference": "Trail category results in size 11, waterproof flagged as preference not hard constraint"
+    },
+    {
+      "evalId": "disc-004",
+      "userContent": [{"parts": [{"text": "Wide-width dress shoes size 10, budget $200"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 200, "size": "10", "width": "2E", "category": "dress"}}
+      ],
+      "reference": "Dress category, wide width enforced, under $200"
+    },
+    {
+      "evalId": "disc-005",
+      "userContent": [{"parts": [{"text": "Gym shoe for CrossFit, size 12, extra wide"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"size": "12", "width": "4E", "category": "training"}}
+      ],
+      "reference": "Training/crossfit category, extra wide enforced"
+    },
+    {
+      "evalId": "disc-006",
+      "userContent": [{"parts": [{"text": "Something light for walking, size 8, under $80"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 80, "size": "8"}}
+      ],
+      "reference": "Casual/walking category under $80"
+    },
+    {
+      "evalId": "disc-007",
+      "userContent": [{"parts": [{"text": "Shoes available at Store 04, size 10, any style"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"size": "10"}},
+        {"toolName": "check_inventory", "toolInput": {"store_id": "STR-04"}}
+      ],
+      "reference": "Store-specific availability checked, results filtered to STR-04 stock"
+    },
+    {
+      "evalId": "disc-008",
+      "userContent": [{"parts": [{"text": "Marathon race day shoe, size 9, under $120"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 120, "size": "9", "category": "running"}}
+      ],
+      "reference": "Road running category under $120 in size 9"
+    },
+    {
+      "evalId": "disc-009",
+      "userContent": [{"parts": [{"text": "Gift for my dad, size 11 dress shoe, around $150"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 150, "size": "11", "category": "dress"}}
+      ],
+      "reference": "Dress category in size 11 under $150"
+    },
+    {
+      "evalId": "disc-010",
+      "userContent": [{"parts": [{"text": "Running shoe, size 10, 2E width, max $130"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 130, "size": "10", "width": "2E", "category": "running"}}
+      ],
+      "reference": "Road running, size 10, 2E width, under $130 enforced as hard constraint"
+    },
+    {
+      "evalId": "disc-011",
+      "userContent": [{"parts": [{"text": "Best trail shoe in stock, size 9"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"size": "9", "category": "trail"}},
+        {"toolName": "check_inventory"}
+      ],
+      "reference": "Trail category in stock only, size 9, ranked by relevance"
+    },
+    {
+      "evalId": "disc-012",
+      "userContent": [{"parts": [{"text": "Half marathon shoe for someone with plantar fasciitis, size 10"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"size": "10", "category": "running"}}
+      ],
+      "reference": "Road running with max cushion highlighted for plantar fasciitis context"
+    },
+    {
+      "evalId": "disc-013",
+      "userContent": [{"parts": [{"text": "Slip-on shoes, size 11, under $90"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 90, "size": "11"}}
+      ],
+      "reference": "Casual/slip-on under $90 in size 11"
+    },
+    {
+      "evalId": "disc-014",
+      "userContent": [{"parts": [{"text": "Casual sneakers for traveling, size 10, wide, under $100"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 100, "size": "10", "width": "2E"}}
+      ],
+      "reference": "Casual category wide fit under $100"
+    },
+    {
+      "evalId": "disc-015",
+      "userContent": [{"parts": [{"text": "Size 13 running shoe under $150"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 150, "size": "13", "category": "running"}}
+      ],
+      "reference": "Size 13 road running under $150"
+    },
+    {
+      "evalId": "disc-016",
+      "userContent": [{"parts": [{"text": "Shoes for a 5K race, size 9"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"size": "9", "category": "running"}}
+      ],
+      "reference": "Road running for 5K in size 9"
+    },
+    {
+      "evalId": "disc-017",
+      "userContent": [{"parts": [{"text": "Training shoe with wide toe box, size 11, under $120"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 120, "size": "11", "category": "training"}}
+      ],
+      "reference": "Training category wide fit under $120"
+    },
+    {
+      "evalId": "disc-018",
+      "userContent": [{"parts": [{"text": "Business formal shoe black, size 10"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"size": "10", "category": "dress"}}
+      ],
+      "reference": "Dress/formal category in size 10"
+    },
+    {
+      "evalId": "disc-019",
+      "userContent": [{"parts": [{"text": "Shoe that works for both gym and casual, size 10, under $130"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 130, "size": "10"}}
+      ],
+      "reference": "Training or casual versatile option under $130"
+    },
+    {
+      "evalId": "disc-020",
+      "userContent": [{"parts": [{"text": "Running shoe size 9 narrow, under $150"}]}],
+      "expectedToolUse": [
+        {"toolName": "search_products", "toolInput": {"budget_max": 150, "size": "9", "category": "running"}}
+      ],
+      "reference": "Road running narrow/standard width under $150 in size 9"
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "evalSetId": "analyst-v1",
+  "description": "15 manager analyst chat cases — data questions, trend explanations, anomaly detection",
+  "evalCases": [
+    {
+      "evalId": "ana-001",
+      "userContent": [{"parts": [{"text": "Why are Pegasus 41 sales up this week?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_sales_trend", "toolInput": {"sku": "SHOE-PEG41-GRY"}},
+        {"toolName": "get_social_signals", "toolInput": {"sku": "SHOE-PEG41-GRY"}},
+        {"toolName": "get_correlation_signal_sales", "toolInput": {"sku": "SHOE-PEG41-GRY"}}
+      ],
+      "reference": "Explains upward trend, cites social posts as likely driver, shows signal-sales correlation"
+    },
+    {
+      "evalId": "ana-002",
+      "userContent": [{"parts": [{"text": "Which category has the lowest sales this month?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_category_performance"}
+      ],
+      "reference": "Returns category ranking, identifies lowest performer, notes % vs prior period"
+    },
+    {
+      "evalId": "ana-003",
+      "userContent": [{"parts": [{"text": "Which store is underperforming and why?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_store_comparison"},
+        {"toolName": "get_sales_anomalies"}
+      ],
+      "reference": "Identifies bottom store by revenue, cross-references anomaly data for possible cause"
+    },
+    {
+      "evalId": "ana-004",
+      "userContent": [{"parts": [{"text": "Are the social media posts about the grey shoes actually driving sales?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_correlation_signal_sales", "toolInput": {"sku": "SHOE-PEG41-GRY"}},
+        {"toolName": "get_sales_trend", "toolInput": {"sku": "SHOE-PEG41-GRY"}}
+      ],
+      "reference": "Shows day-by-day signal vs sales correlation, confirms or denies causal link with data"
+    },
+    {
+      "evalId": "ana-005",
+      "userContent": [{"parts": [{"text": "What products should I prioritize for reordering today?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_sales_anomalies"},
+        {"toolName": "get_sales_summary"}
+      ],
+      "reference": "Lists over-performers with high z-score as reorder priorities, explains urgency for each"
+    },
+    {
+      "evalId": "ana-006",
+      "userContent": [{"parts": [{"text": "Why are dress shoe sales down?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_sales_trend", "toolInput": {"sku": "SHOE-DRESS-BRN"}},
+        {"toolName": "get_category_performance"},
+        {"toolName": "get_social_signals"}
+      ],
+      "reference": "Shows declining trend for dress category, checks social signals for demand signals, suggests possible causes"
+    },
+    {
+      "evalId": "ana-007",
+      "userContent": [{"parts": [{"text": "Compare this month's sales to last month across all categories"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_category_performance", "toolInput": {"days": 30}}
+      ],
+      "reference": "Returns category comparison with pct_change vs prior period for all categories"
+    },
+    {
+      "evalId": "ana-008",
+      "userContent": [{"parts": [{"text": "Which SKU has the most unusual sales pattern right now?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_sales_anomalies"}
+      ],
+      "reference": "Returns highest z-score SKU with explanation of what's unusual"
+    },
+    {
+      "evalId": "ana-009",
+      "userContent": [{"parts": [{"text": "How is the Downtown Flagship store performing vs the other stores?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_store_comparison"}
+      ],
+      "reference": "Compares STR-01 to all other stores by units and revenue"
+    },
+    {
+      "evalId": "ana-010",
+      "userContent": [{"parts": [{"text": "Show me the sales trend for trail running shoes over the last 2 weeks"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_sales_summary", "toolInput": {"category": "trail", "days": 14}},
+        {"toolName": "get_sales_trend", "toolInput": {"sku": "SHOE-TRAIL-BLK", "days": 14}}
+      ],
+      "reference": "Trail category trend for 14 days, peak and low days identified"
+    },
+    {
+      "evalId": "ana-011",
+      "userContent": [{"parts": [{"text": "What's the total revenue from running shoes vs casual shoes this month?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_sales_summary", "toolInput": {"category": "running", "days": 30}},
+        {"toolName": "get_sales_summary", "toolInput": {"category": "casual", "days": 30}}
+      ],
+      "reference": "Compares running vs casual category revenue with absolute and relative numbers"
+    },
+    {
+      "evalId": "ana-012",
+      "userContent": [{"parts": [{"text": "Is there anything I should be worried about in the next 7 days?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_sales_anomalies"},
+        {"toolName": "get_sales_summary"}
+      ],
+      "reference": "Surfaces under-performers and over-performers, flags any with stockout risk"
+    },
+    {
+      "evalId": "ana-013",
+      "userContent": [{"parts": [{"text": "Approve a purchase order for 200 Pegasus 41s"}]}],
+      "expectedBehavior": "REFUSED",
+      "expectedToolUse": [],
+      "reference": "Analyst agent is read-only — refuses PO approval and directs manager to the PO queue"
+    },
+    {
+      "evalId": "ana-014",
+      "userContent": [{"parts": [{"text": "Set the price of the Pegasus 41 to $99"}]}],
+      "expectedBehavior": "REFUSED",
+      "expectedToolUse": [],
+      "reference": "Analyst agent cannot set prices — refused"
+    },
+    {
+      "evalId": "ana-015",
+      "userContent": [{"parts": [{"text": "Which day of the week sells the most shoes overall?"}]}],
+      "expectedToolUse": [
+        {"toolName": "get_sales_summary", "toolInput": {"days": 90}}
+      ],
+      "reference": "Analyzes day-of-week pattern from sales data, identifies weekend spike"
+    }
+  ]
+}
