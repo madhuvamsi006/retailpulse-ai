@@ -3,5 +3,5 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-EXPOSE 8002
-CMD ["python", "gs_inventory_a2a/main.py"]
+EXPOSE 8080
+CMD ["python", "-m", "uvicorn", "gs_inventory_a2a.main:app", "--host", "0.0.0.0", "--port", "8080"]

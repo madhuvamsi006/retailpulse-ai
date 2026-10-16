@@ -1,0 +1,24 @@
+steps:
+  # Build gs-mcp (internal data layer)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-mcp
+    args: ['build', '-f', 'Dockerfile.mcp', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-repo/gs-mcp:latest', '.']
+
+  # Build gs-inventory-a2a (internal A2A service)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-inventory
+    args: ['build', '-f', 'Dockerfile.inventory', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-repo/gs-inventory-a2a:latest', '.']
+
+  # Build gs-api (public API + frontend)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-api
+    args: ['build', '-f', 'Dockerfile.api', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-repo/gs-api:latest', '.']
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-repo/gs-mcp:latest'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-repo/gs-inventory-a2a:latest'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-repo/gs-api:latest'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
