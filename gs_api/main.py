@@ -37,11 +37,8 @@ app.include_router(ap2_router, prefix="/ap2", tags=["ap2"])
 app.include_router(dashboard_router, tags=["dashboard"])
 app.include_router(manager_chat_router, tags=["manager-chat"])
 
-# Serve frontend static files if present
-_static_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "shopper")
-if os.path.isdir(_static_path):
-    app.mount("/", StaticFiles(directory=_static_path, html=True), name="shopper_ui")
 
+# ── API routes MUST come before static mount — mount at "/" captures everything ──
 
 @app.get("/health", tags=["ops"])
 async def health() -> dict:
@@ -57,6 +54,15 @@ async def info() -> dict:
         "mcp_url": config.MCP_SERVICE_URL,
         "inventory_a2a_url": config.INVENTORY_A2A_URL,
     }
+
+
+# Static files last — mounts at "/" will catch anything not matched above
+_shopper_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "shopper")
+_manager_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "manager")
+if os.path.isdir(_manager_path):
+    app.mount("/manager", StaticFiles(directory=_manager_path, html=True), name="manager_ui")
+if os.path.isdir(_shopper_path):
+    app.mount("/", StaticFiles(directory=_shopper_path, html=True), name="shopper_ui")
 
 
 if __name__ == "__main__":
