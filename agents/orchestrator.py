@@ -11,12 +11,12 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-import google.generativeai as genai
-
+import sys
+import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import config
-
-genai.configure()
+from agents.gemini_client import get_model, generate, init as _init_gemini
+_init_gemini()
 
 SYSTEM_PROMPT = """You are the Orchestrator Agent for Groundswell, an agentic retail platform.
 
@@ -56,7 +56,7 @@ _executor = ThreadPoolExecutor(max_workers=4)
 
 
 def _classify_intent(message: str, user_type: str) -> dict[str, Any]:
-    model = genai.GenerativeModel(config.GEMINI_MODEL)
+    model = get_model()
     prompt = f"""Classify the user's intent. Return only valid JSON.
 
 User type: {user_type}
@@ -70,8 +70,8 @@ Return:
   "wants_to_buy": true or false,
   "manager_id": null or "manager ID if mentioned"
 }}"""
-    resp = model.generate_content(prompt)
-    text = resp.text.strip()
+    resp = generate(model, prompt)
+    text = resp.strip()
     if text.startswith("```"):
         text = text.split("```")[1]
         if text.startswith("json"):

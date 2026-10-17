@@ -30,10 +30,17 @@ async def get_fused_forecast(sku: str) -> dict[str, Any]:
 async def get_signals(hours: int = 24, limit: int = 20) -> dict[str, Any]:
     client = _bq()
     sql = f"""
-        SELECT post_id, platform, post_text, sku, engagement_score,
-               posted_at, NULL AS momentum
+        SELECT
+            post_id, platform, post_text, sku, engagement_score, posted_at,
+            CASE
+                WHEN engagement_score >= 7.0 THEN 'high'
+                WHEN engagement_score >= 3.0 THEN 'medium'
+                WHEN engagement_score >= 1.0 THEN 'low'
+                ELSE 'none'
+            END AS momentum
         FROM `{config.GCP_PROJECT_ID}.{config.BQ_DATASET}.social_signals`
         WHERE posted_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @hours HOUR)
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY posted_at DESC) = 1
         ORDER BY engagement_score DESC
         LIMIT @limit
     """

@@ -5,13 +5,14 @@ import os
 import time
 from typing import Any
 
-import google.generativeai as genai
+from agents.gemini_client import get_model, generate, init as _init_gemini
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import config
 from agents import mcp_client
 
-genai.configure()
+
+_init_gemini()
 
 SYSTEM_PROMPT = """You are the Merchandising Agent for Groundswell.
 
@@ -81,7 +82,7 @@ def run(
         total_cost = recommended_qty * unit_cost
 
     # Generate reasoning narrative with Gemini
-    model = genai.GenerativeModel(config.GEMINI_MODEL)
+    model = get_model()
     reasoning_prompt = f"""Write a purchase order justification for a retail manager. Be concise (3-4 sentences).
 
 Product: {product.get('name')} (SKU: {sku})

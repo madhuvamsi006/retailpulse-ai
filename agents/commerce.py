@@ -5,13 +5,14 @@ import os
 import time
 from typing import Any
 
-import google.generativeai as genai
+from agents.gemini_client import get_model, generate, init as _init_gemini
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import config
 from agents import mcp_client
 
-genai.configure()
+
+_init_gemini()
 
 SYSTEM_PROMPT = """You are the Commerce Agent for Groundswell.
 
@@ -53,7 +54,7 @@ def run(
     cart = cart_result["cart"]
 
     # Generate shopper-facing narration
-    model = genai.GenerativeModel(config.GEMINI_MODEL)
+    model = get_model()
     narration_prompt = f"""You are a helpful shopping assistant. Narrate this cart to the shopper in a friendly, clear way.
 
 Shopper asked: "{shopper_query}"

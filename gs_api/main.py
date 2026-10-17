@@ -9,6 +9,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, RedirectResponse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -26,7 +27,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if config.APP_ENV == "development" else [os.getenv("FRONTEND_ORIGIN", "")],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,11 +57,21 @@ async def info() -> dict:
     }
 
 
-# Static files last — mounts at "/" will catch anything not matched above
-_shopper_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "shopper")
+# Explicit routes for manager UI (avoids Starlette mount trailing-slash issues)
 _manager_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "manager")
+_manager_index = os.path.join(_manager_path, "index.html")
+
+@app.get("/manager", include_in_schema=False)
+@app.get("/manager/", include_in_schema=False)
+async def manager_ui():
+    return FileResponse(_manager_index)
+
+# Mount manager static assets (CSS, JS, images)
 if os.path.isdir(_manager_path):
-    app.mount("/manager", StaticFiles(directory=_manager_path, html=True), name="manager_ui")
+    app.mount("/manager", StaticFiles(directory=_manager_path), name="manager_assets")
+
+# Shopper UI — mounted last at "/" catches everything else
+_shopper_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "shopper")
 if os.path.isdir(_shopper_path):
     app.mount("/", StaticFiles(directory=_shopper_path, html=True), name="shopper_ui")
 

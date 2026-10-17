@@ -5,14 +5,15 @@ import os
 import time
 from typing import Any
 
-import google.generativeai as genai
+from agents.gemini_client import get_model, generate, init as _init_gemini
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import config
 from agents import mcp_client
 from ranking.constraint_filter import ShopperConstraints, apply as hard_filter
 
-genai.configure()
+
+_init_gemini()
 
 SYSTEM_PROMPT = """You are the Discovery Agent for Groundswell, a retail platform.
 
@@ -44,7 +45,7 @@ Output format for recommendations:
 
 def _extract_constraints(user_query: str, session_id: str) -> dict[str, Any]:
     """Use Gemini to extract structured constraints from a natural language query."""
-    model = genai.GenerativeModel(config.GEMINI_MODEL)
+    model = get_model()
     extraction_prompt = f"""Extract search constraints from this shopper query. Return only valid JSON.
 
 Query: {user_query}
@@ -100,12 +101,14 @@ def run(user_query: str, session_id: str) -> dict[str, Any]:
         constraints_raw, f"{len(products)} results", (time.time() - t1) * 1000
     )
 
-    # Hard filter — deterministic, no LLM
+    # Hard filter — deterministic, no LLM.
+    # IMPORTANT: do NOT apply category here — product search already handles relevance.
+    # Category strings from Gemini (e.g. "running shoes") don't match our taxonomy ("running-road").
     shopper_constraints = ShopperConstraints(
         budget_max=constraints_raw.get("budget_max"),
-        size=constraints_raw.get("size"),
-        width=constraints_raw.get("width"),
-        categories=[constraints_raw["category"]] if constraints_raw.get("category") else None,
+        size=str(constraints_raw.get("size")) if constraints_raw.get("size") else None,
+        width=str(constraints_raw.get("width")).upper() if constraints_raw.get("width") else None,
+        categories=None,  # relevance handled by search; category mismatch would filter everything
         in_stock_only=True,
     )
     filtered = hard_filter(products, shopper_constraints)
@@ -131,29 +134,44 @@ def run(user_query: str, session_id: str) -> dict[str, Any]:
             "cosine_distance": product.get("cosine_distance"),
         })
 
-    # Generate natural language reasons
-    model = genai.GenerativeModel(config.GEMINI_MODEL)
-    reason_prompt = f"""Given shopper query: "{user_query}"
-And these product results: {json.dumps(recommendations, default=str)}
+    if not recommendations:
+        return {
+            "recommendations": [],
+            "summary": "No products found matching your criteria. Try adjusting your budget, size, or category.",
+        }
 
-Write a JSON response with recommendations. For each product write a one-sentence reason why it fits.
-Follow this schema exactly:
+    # Add reason for each product — Gemini narrates ONLY the products we found
+    valid_skus = {r["sku"] for r in recommendations}
+    model = get_model()
+    reason_prompt = f"""A shopper asked: "{user_query}"
+
+We found these EXACT products in our catalog (do NOT add or invent any other products):
+{json.dumps(recommendations, default=str)}
+
+Write a brief one-sentence reason for each product explaining why it fits the shopper's request.
+Return ONLY valid JSON with this exact schema — use only the SKUs listed above:
 {{
   "recommendations": [
-    {{"sku": "...", "name": "...", "price": 0.0, "reason": "...", "stockout_risk": "...", "days_until_stockout": 0}}
+    {{"sku": "EXACT_SKU_FROM_LIST", "name": "exact name", "price": 0.0, "reason": "one sentence", "stockout_risk": "urgency", "days_until_stockout": 0}}
   ],
   "summary": "one sentence overview"
 }}"""
-    resp = model.generate_content(reason_prompt)
-    text = resp.text.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-
     try:
+        resp = model.generate_content(reason_prompt)
+        text = resp.text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
         result = json.loads(text.strip())
-    except json.JSONDecodeError:
+        # Strip any hallucinated SKUs Gemini might have added
+        result["recommendations"] = [
+            r for r in result.get("recommendations", [])
+            if r.get("sku") in valid_skus
+        ]
+        if not result["recommendations"]:
+            raise ValueError("All recommendations were hallucinated")
+    except Exception:
         result = {
             "recommendations": recommendations,
             "summary": f"Found {len(recommendations)} products matching your criteria.",

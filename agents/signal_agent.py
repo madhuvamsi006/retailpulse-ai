@@ -5,7 +5,7 @@ import os
 import time
 from typing import Any
 
-import google.generativeai as genai
+from agents.gemini_client import get_model, generate, init as _init_gemini
 from google.cloud import firestore
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -13,7 +13,8 @@ import config
 from agents import mcp_client
 from fusion.surge_multiplier import SocialSignal, fuse
 
-genai.configure()
+
+_init_gemini()
 
 SYSTEM_PROMPT = """You are the Signal Agent for Groundswell. Your job is to read raw social media posts and extract structured demand signals.
 
@@ -44,7 +45,7 @@ Rules:
 
 
 def _extract_signal_from_post(post_text: str) -> dict[str, Any]:
-    model = genai.GenerativeModel(config.GEMINI_MODEL)
+    model = get_model()
     resp = model.generate_content(EXTRACTION_PROMPT.format(post_text=post_text))
     text = resp.text.strip()
     if text.startswith("```"):

@@ -6,8 +6,9 @@ Does NOT approve POs, does NOT set prices, does NOT modify data.
 import json
 from typing import Any
 
-import google.generativeai as genai
 import config
+from agents.gemini_client import init as _init_gemini, get_model
+_init_gemini()
 from agents import mcp_client
 from gs_api import sse
 
@@ -162,12 +163,7 @@ def run(question: str, session_id: str) -> str:
     Agentic loop: Gemini calls tools, we execute them, repeat until a final answer.
     Emits SSE events throughout so the trace panel shows all tool calls live.
     """
-    genai.configure(api_key=None)  # uses ADC
-    model = genai.GenerativeModel(
-        model_name=config.GEMINI_MODEL,
-        system_instruction=SYSTEM_PROMPT,
-        tools=[{"function_declarations": _build_tool_definitions()}],
-    )
+    model = get_model(system_instruction=SYSTEM_PROMPT)
 
     sse.emit_delegation(session_id, "orchestrator", "analyst_agent", f"Manager question: {question[:80]}")
 

@@ -1,19 +1,15 @@
-"""HTTP client used by all agents to call MCP tools. Agents never hold a DB client."""
+"""
+MCP Client — calls MCP tool functions directly (in-process).
+The gs-mcp Cloud Run service represents the production design (separate internal service).
+For the demo, we call the tool functions directly since they share the same image.
+All DB access still goes through the tool functions — agents never hold clients directly.
+"""
+import time
 from typing import Any
 
-import httpx
 import config
 
-TIMEOUT = 30.0
-
-
-def _headers(session_id: str, agent_name: str) -> dict[str, str]:
-    return {"X-Session-Id": session_id, "X-Agent-Name": agent_name}
-
-
-def _base() -> str:
-    return config.MCP_SERVICE_URL.rstrip("/")
-
+# ── Commerce tools ──────────────────────────────────────────────────────────────
 
 def search_products(
     query: str,
@@ -25,258 +21,107 @@ def search_products(
     category: str | None = None,
     limit: int = 10,
 ) -> list[dict[str, Any]]:
-    payload: dict[str, Any] = {"query": query, "limit": limit}
-    if budget_max is not None:
-        payload["budget_max"] = budget_max
-    if size is not None:
-        payload["size"] = size
-    if width is not None:
-        payload["width"] = width
-    if category is not None:
-        payload["category"] = category
-
-    resp = httpx.post(
-        f"{_base()}/tools/search_products",
-        json=payload,
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json().get("results", [])
+    from gs_mcp.tools.products import search_products as _fn
+    from gs_mcp.guards import audit
+    t0 = time.time()
+    result = _fn(query, budget_max, size, width, category, limit)
+    audit(session_id, agent_name, "search_products", {"query": query},
+          f"{len(result)} products", "returned", 1.0, (time.time() - t0) * 1000)
+    return result
 
 
 def get_product(sku: str, session_id: str, agent_name: str) -> dict[str, Any]:
-    resp = httpx.get(
-        f"{_base()}/tools/get_product/{sku}",
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.products import get_product as _fn
+    return _fn(sku) or {}
 
 
 def check_inventory(
-    sku: str,
-    session_id: str,
-    agent_name: str,
-    store_id: str | None = None,
+    sku: str, session_id: str, agent_name: str, store_id: str | None = None
 ) -> dict[str, Any]:
-    params: dict[str, Any] = {}
-    if store_id:
-        params["store_id"] = store_id
-    resp = httpx.get(
-        f"{_base()}/tools/check_inventory/{sku}",
-        params=params,
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.inventory import check_inventory as _fn
+    return _fn(sku, store_id)
 
 
 def reserve_stock(
-    sku: str,
-    qty: int,
-    session_id: str,
-    agent_name: str,
-    store_id: str | None = None,
+    sku: str, qty: int, session_id: str, agent_name: str, store_id: str | None = None
 ) -> dict[str, Any]:
-    payload: dict[str, Any] = {"sku": sku, "qty": qty}
-    if store_id:
-        payload["store_id"] = store_id
-    resp = httpx.post(
-        f"{_base()}/tools/reserve_stock",
-        json=payload,
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.inventory import reserve_stock as _fn
+    return _fn(sku, qty, session_id, store_id)
 
 
 def get_forecast(
-    sku: str,
-    session_id: str,
-    agent_name: str,
-    horizon_days: int = 7,
+    sku: str, session_id: str, agent_name: str, horizon_days: int = 7
 ) -> dict[str, Any]:
-    resp = httpx.get(
-        f"{_base()}/tools/get_forecast/{sku}",
-        params={"horizon_days": horizon_days},
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.forecasting import get_forecast as _fn
+    return _fn(sku, horizon_days)
 
 
 def forecast_stockout(
-    sku: str,
-    session_id: str,
-    agent_name: str,
-    store_id: str | None = None,
+    sku: str, session_id: str, agent_name: str, store_id: str | None = None
 ) -> dict[str, Any]:
-    params: dict[str, Any] = {}
-    if store_id:
-        params["store_id"] = store_id
-    resp = httpx.get(
-        f"{_base()}/tools/forecast_stockout/{sku}",
-        params=params,
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.forecasting import forecast_stockout as _fn
+    return _fn(sku, store_id)
 
 
 def get_social_signals(
-    session_id: str,
-    agent_name: str,
-    sku: str | None = None,
-    hours: int = 24,
-    limit: int = 50,
+    session_id: str, agent_name: str,
+    sku: str | None = None, hours: int = 24, limit: int = 50
 ) -> list[dict[str, Any]]:
-    params: dict[str, Any] = {"hours": hours, "limit": limit}
-    if sku:
-        params["sku"] = sku
-    resp = httpx.get(
-        f"{_base()}/tools/get_social_signals",
-        params=params,
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json().get("signals", [])
+    from gs_mcp.tools.signals import get_social_signals as _fn
+    return _fn(sku, hours, limit)
 
 
 def create_cart(
-    line_items: list[dict[str, Any]],
-    session_id: str,
-    agent_name: str,
+    line_items: list[dict[str, Any]], session_id: str, agent_name: str
 ) -> dict[str, Any]:
-    resp = httpx.post(
-        f"{_base()}/tools/create_cart",
-        json={"line_items": line_items},
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.orders import create_cart as _fn
+    return _fn(session_id, line_items)
 
 
 def request_replenishment(
-    sku: str,
-    recommended_qty: int,
-    reasoning: str,
-    manager_id: str,
-    session_id: str,
-    agent_name: str,
+    sku: str, recommended_qty: int, reasoning: str,
+    manager_id: str, session_id: str, agent_name: str
 ) -> dict[str, Any]:
-    resp = httpx.post(
-        f"{_base()}/tools/request_replenishment",
-        json={
-            "sku": sku,
-            "recommended_qty": recommended_qty,
-            "reasoning": reasoning,
-            "manager_id": manager_id,
-        },
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.orders import request_replenishment as _fn
+    return _fn(sku, recommended_qty, reasoning, manager_id, session_id)
 
 
-# ── Analytics tools ────────────────────────────────────────────────────────────
+# ── Analytics tools ─────────────────────────────────────────────────────────────
 
 def get_sales_summary(
-    session_id: str,
-    agent_name: str,
-    sku: str | None = None,
-    category: str | None = None,
-    store_id: str | None = None,
-    days: int = 30,
+    session_id: str, agent_name: str,
+    sku: str | None = None, category: str | None = None,
+    store_id: str | None = None, days: int = 30
 ) -> dict[str, Any]:
-    payload: dict[str, Any] = {"days": days}
-    if sku:
-        payload["sku"] = sku
-    if category:
-        payload["category"] = category
-    if store_id:
-        payload["store_id"] = store_id
-    resp = httpx.post(
-        f"{_base()}/tools/get_sales_summary",
-        json=payload,
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.analytics import get_sales_summary as _fn
+    return _fn(sku, category, store_id, days)
 
 
 def get_sales_trend(sku: str, session_id: str, agent_name: str, days: int = 30) -> dict[str, Any]:
-    resp = httpx.get(
-        f"{_base()}/tools/get_sales_trend/{sku}",
-        params={"days": days},
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.analytics import get_sales_trend as _fn
+    return _fn(sku, days)
 
 
 def get_category_performance(session_id: str, agent_name: str, days: int = 30) -> dict[str, Any]:
-    resp = httpx.get(
-        f"{_base()}/tools/get_category_performance",
-        params={"days": days},
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.analytics import get_category_performance as _fn
+    return _fn(days)
 
 
 def get_sales_anomalies(session_id: str, agent_name: str, days: int = 14) -> dict[str, Any]:
-    resp = httpx.get(
-        f"{_base()}/tools/get_sales_anomalies",
-        params={"days": days},
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.analytics import get_sales_anomalies as _fn
+    return _fn(days)
 
 
 def get_store_comparison(
-    session_id: str,
-    agent_name: str,
-    sku: str | None = None,
-    days: int = 30,
+    session_id: str, agent_name: str,
+    sku: str | None = None, days: int = 30
 ) -> dict[str, Any]:
-    params: dict[str, Any] = {"days": days}
-    if sku:
-        params["sku"] = sku
-    resp = httpx.get(
-        f"{_base()}/tools/get_store_comparison",
-        params=params,
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.analytics import get_store_comparison as _fn
+    return _fn(sku, days)
 
 
 def get_correlation_signal_sales(
-    sku: str,
-    session_id: str,
-    agent_name: str,
-    days: int = 14,
+    sku: str, session_id: str, agent_name: str, days: int = 14
 ) -> dict[str, Any]:
-    resp = httpx.get(
-        f"{_base()}/tools/get_correlation_signal_sales/{sku}",
-        params={"days": days},
-        headers=_headers(session_id, agent_name),
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    from gs_mcp.tools.analytics import get_correlation_signal_sales as _fn
+    return _fn(sku, days)
