@@ -306,7 +306,8 @@ async function loadAudit() {
 }
 
 // ── Analyst Agent chat ──────────────────────────────────────────────────────
-let analystSessionId = crypto.randomUUID();
+function newId() { try { return crypto.randomUUID(); } catch(_) { return 'sess-' + Math.random().toString(36).slice(2) + '-' + Date.now(); } }
+let analystSessionId = newId();
 let analystES = null;
 
 function connectAnalystTrace() {

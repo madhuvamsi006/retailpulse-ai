@@ -87,8 +87,13 @@
 </div>
 
 <script>
-const API = '';  // same origin via nginx / dev proxy
-let sessionId = crypto.randomUUID();
+const API = '';
+// crypto.randomUUID() needs HTTPS — fallback for HTTP
+function newId() {
+  try { return crypto.randomUUID(); } catch(_) {}
+  return 'sess-' + Math.random().toString(36).slice(2) + '-' + Date.now();
+}
+const sessionId = newId();
 let currentCart = null;
 let intentMandateId = null;
 let es = null;
