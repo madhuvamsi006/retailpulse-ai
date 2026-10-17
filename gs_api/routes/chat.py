@@ -63,11 +63,13 @@ async def chat(body: ChatRequest) -> ChatResponse:
     except Exception:
         pass  # fabric errors never block the agent
 
-    # Run orchestrator in thread (synchronous agent code)
+    # Run orchestrator via executor with explicit bounded pool (not default unbounded)
+    import concurrent.futures
+    _pool = concurrent.futures.ThreadPoolExecutor(max_workers=8)
     loop = asyncio.get_event_loop()
     try:
         result = await loop.run_in_executor(
-            None,
+            _pool,
             lambda: orchestrator.run(
                 message=body.message,
                 session_id=body.session_id,

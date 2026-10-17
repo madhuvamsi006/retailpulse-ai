@@ -1,34 +1,72 @@
-"""SSE agent trace broadcaster — streams every delegation, tool call, and decision live."""
+"""
+SSE agent trace broadcaster.
+emit() is called from worker threads — uses loop.call_soon_threadsafe() for safety.
+subscribe() keep-alive ping sits inside the while loop so it never terminates the stream.
+"""
 import asyncio
 import json
+import weakref
 from collections import defaultdict
 from typing import AsyncGenerator
 
 _queues: dict[str, list[asyncio.Queue]] = defaultdict(list)
+_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _get_loop() -> asyncio.AbstractEventLoop | None:
+    global _loop
+    try:
+        if _loop is None or _loop.is_closed():
+            _loop = asyncio.get_event_loop()
+        return _loop
+    except RuntimeError:
+        return None
 
 
 async def subscribe(session_id: str) -> AsyncGenerator[str, None]:
-    q: asyncio.Queue = asyncio.Queue()
+    q: asyncio.Queue = asyncio.Queue(maxsize=100)
     _queues[session_id].append(q)
+    # Capture the running loop for thread-safe emit
+    global _loop
+    _loop = asyncio.get_running_loop()
     try:
         while True:
-            event = await asyncio.wait_for(q.get(), timeout=30)
-            if event is None:
-                break
-            yield f"data: {json.dumps(event)}\n\n"
-    except asyncio.TimeoutError:
-        yield "data: {\"type\": \"ping\"}\n\n"
+            try:
+                event = await asyncio.wait_for(q.get(), timeout=25)
+                if event is None:
+                    break
+                yield f"data: {json.dumps(event)}\n\n"
+            except asyncio.TimeoutError:
+                # Keep-alive ping — continues loop, never terminates stream
+                yield 'data: {"type":"ping"}\n\n'
     finally:
-        _queues[session_id].remove(q)
+        try:
+            _queues[session_id].remove(q)
+        except ValueError:
+            pass
+        if session_id in _queues and not _queues[session_id]:
+            del _queues[session_id]
+
+
+def _enqueue(q: asyncio.Queue, event: dict) -> None:
+    try:
+        q.put_nowait(event)
+    except asyncio.QueueFull:
+        pass
 
 
 def emit(session_id: str, event_type: str, payload: dict) -> None:
+    """Thread-safe emit — safe to call from any worker thread."""
     event = {"type": event_type, **payload}
+    loop = _get_loop()
     for q in list(_queues.get(session_id, [])):
-        try:
-            q.put_nowait(event)
-        except asyncio.QueueFull:
-            pass
+        if loop and not loop.is_closed():
+            loop.call_soon_threadsafe(_enqueue, q, event)
+        else:
+            try:
+                q.put_nowait(event)
+            except Exception:
+                pass
 
 
 def emit_delegation(session_id: str, from_agent: str, to_agent: str, reason: str) -> None:
